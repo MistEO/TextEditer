@@ -18,24 +18,18 @@
 #include <QtCore\qtextstream.h>
 #include <QtCore\qflags.h>
 #include <QtGui\qpalette.h>
+#include <QtWidgets\qfontdialog.h>
+#include <QtCore\qlist.h>
+#include <QtCore\qurl.h>
+#include <qevent.h>
+
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 {
 	createActions();
 	createMenus();
-	mainTextEdit = new QTextEdit;
-	mainTextEdit->setFontPointSize(15);
-
-	QHBoxLayout * mainLayout = new QHBoxLayout;
-	mainLayout->addWidget(mainTextEdit);
-
-	mainWidget = new QWidget;
-	this->setCentralWidget(mainWidget);
-	mainWidget->setLayout(mainLayout);
-
-	//fontDialog = new QFontDialog(this);
-	//fontDialog->show();
+	createMainWidget();
 
 	setCurrentFile("");
 	readSettings();
@@ -76,6 +70,10 @@ void MainWindow::createMenus()
 	//Edit菜单
 	editMenu = menuBar()->addMenu(tr("&Edit"));
 	editMenu->addAction(findAction);
+
+	//Style菜单
+	styleMenu = menuBar()->addMenu(tr("&Style"));
+	styleMenu->addAction(fontAction);
 }
 
 void MainWindow::createActions()
@@ -121,7 +119,29 @@ void MainWindow::createActions()
 	findAction = new QAction(tr("&Find"), this);
 	findAction->setShortcut(QKeySequence::Find);
 	connect(findAction, &QAction::triggered,
-		this, &MainWindow::find);
+		this, &MainWindow::showFindDialog);
+
+	//Style菜单项
+	fontAction = new QAction(tr("&Font"), this);
+	connect(fontAction, &QAction::triggered,
+		this, &MainWindow::showFontDialog);
+}
+
+void MainWindow::createMainWidget()
+{
+	mainTextEdit = new QTextEdit;
+	this->setCentralWidget(mainTextEdit);
+
+	//QHBoxLayout * mainLayout = new QHBoxLayout;
+	//mainLayout->addWidget(mainTextEdit);
+	//mainWidget = new QWidget;
+	//mainWidget->setLayout(mainLayout);
+	//this->centralWidget()->setLayout(mainLayout);
+
+	//拖拽事件交于MainWindow管理
+	//setCentralWidget(mainTextEdit);
+	//mainTextEdit->setAcceptDrops(false);
+	//setAcceptDrops(true);
 }
 
 void MainWindow::newFile()
@@ -185,7 +205,7 @@ void MainWindow::clearRecentFiles()
 	writeSettings();
 }
 
-void MainWindow::find()
+void MainWindow::showFindDialog()
 {
 	if (!findDialog) {
 		findDialog = new FindDialog(this);
@@ -221,11 +241,30 @@ void MainWindow::findString(const QString &str, Qt::CaseSensitivity cs, FindDial
 	mainTextEdit->setTextCursor(mainTextCursor);
 }
 
+void MainWindow::showFontDialog()
+{
+	if (!fontDialog) {
+		fontDialog = new QFontDialog(this);
+		connect(fontDialog, &QFontDialog::fontSelected,
+			this, &MainWindow::setFont);
+		connect(fontDialog, &QFontDialog::fontSelected,
+			this, [&]()-> void {font = fontDialog->selectedFont(); });
+	}
+	fontDialog->show();
+	fontDialog->raise();
+	fontDialog->activateWindow();
+}
+
+void MainWindow::setFont(const QFont & f)
+{
+	mainTextEdit->setFont(f);
+}
+
 bool MainWindow::okToContinue()
 {
 	if (mainTextEdit->document()->isModified()) {
-		int r = QMessageBox::warning(this, tr("TextEdit"),
-			tr("The document has been modified,\n Do you want ot save your changes?"),
+		int r = QMessageBox::warning(this, tr("TextEditer"),
+			tr("The document has been modified,\nDo you want ot save your changes?"),
 			QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 		if (r == QMessageBox::Yes) {
 			return save(curFile);
@@ -315,6 +354,7 @@ void MainWindow::writeSettings()
 	QSettings settings("MrEO Inc.", "Text Editer");
 	settings.setValue("geometry", saveGeometry());
 	settings.setValue("recentFiles", recentFiles);
+	settings.setValue("font", font);
 }
 
 void MainWindow::readSettings()
@@ -324,4 +364,7 @@ void MainWindow::readSettings()
 
 	recentFiles = settings.value("recentFiles").toStringList();
 	updateRecentFileActions();
+
+	font = settings.value("font", QVariant(QFont("新宋体", 20))).value<QFont>();
+	mainTextEdit->setFont(font);
 }

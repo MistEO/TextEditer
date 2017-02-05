@@ -10,6 +10,8 @@ class QTextEdit;
 class QWidget;
 class QString;
 class QStringList;
+class QFont;
+class QFontDialog;
 
 class MainWindow : public QMainWindow
 {
@@ -31,15 +33,19 @@ private slots:
 	void openRecentFile();
 	void clearRecentFiles();
 
-	void find();
+	void showFindDialog();
 	void findString(const QString &str, 
 		Qt::CaseSensitivity cs, 
 		FindDialog::FindDirection fd, 
 		FindDialog::WholeWord mw);
 
+	void showFontDialog();
+	void setFont(const QFont & f);
+
 private:
 	void createMenus();
 	void createActions();
+	void createMainWidget();
 	void writeSettings();
 	void readSettings();
 
@@ -49,7 +55,7 @@ private:
 	void setCurrentFile(const QString &fileName);
 	void updateRecentFileActions();
 
-	QWidget * mainWidget = nullptr;
+	//QWidget * mainWidget = nullptr;
 	QTextEdit * mainTextEdit = nullptr;
 	const QString programName = tr("Text Editer");
 
@@ -76,7 +82,8 @@ private:
 	//Style²Ëµ¥
 	QMenu *styleMenu = nullptr;
 	QAction * fontAction = nullptr;
-
+	QFontDialog * fontDialog = nullptr;
+	QFont font;
 };
 
 #endif // MAINWINDOW_H
